@@ -1,0 +1,4 @@
+[submodule "components/FreeRTOS-Kernel"]
+	path = components/FreeRTOS-Kernel
+	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+	branch = master
