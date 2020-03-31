@@ -18,10 +18,10 @@ LD_SCRIPT = linker.ld
 RTOS_DIR  ?= ./components/FreeRTOS-Kernel
 # Modify this to the path where your micrcontroller specific port is
 RTOS_DIR_MCU  ?= $(RTOS_DIR)/portable/GCC/ARM_CM4F
-CMSIS_DIR ?= ./components/CMSIS/CMSIS/
 
 # Dont need to change this if MCU is defined correctly
-STARTUP_FILE = $(MCU_DIR)/Source/Templates/gcc/startup_$(shell echo "$(MCU)" | awk '{print tolower($$0)}').o
+# It will add for eg: startup_stm2f429xx.s file to the $(ASM_SOURCES)
+STARTUP_FILE = $(MCU_DIR)/Source/Templates/gcc/startup_$(shell echo "$(MCU)" | awk '{print tolower($$0)}').s
 
 # Select 1 if STM32 HAL library is to be used. This will add -DUSE_HAL_DRIVER=1 to the CFLAGS
 # If enabled then set the correct path of the HAL Driver folder
@@ -53,12 +53,24 @@ OD 	= $(TOOLCHAIN)objdump
 OS 	= $(TOOLCHAIN)size
 GDB = $(TOOLCHAIN)gdb
 
+# System utilities
+# Remove file and folders
+RM 		= rm -rf
+# Remove file
+MKDIR 	= mkdir -p
 ######################################################################
 .DELETE_ON_ERROR:
 
+######################################################################
+# Various sources files and objects
+######################################################################
+CMSIS_DIR = ./components/CMSIS/CMSIS/
+TARGET_DIR = target
+BUILD_DIR  = build
+
 RTOS_SRC      = $(patsubst %.c, %.o, $(wildcard $(RTOS_DIR)/*.c))
 RTOS_MCU_SRC  = $(patsubst %.c, %.o, $(wildcard $(RTOS_DIR_MCU)/*.c))
-OBJS         += $(RTOS_SRC) $(RTOS_MCU_SRC) $(STARTUP_FILE)
+OBJS         += $(RTOS_SRC) $(RTOS_MCU_SRC)
 
 C_SRC    += $(foreach DIR, $(basename $(C_SRC_DIR)), $(wildcard $(DIR)/*.c))
 OBJS     += $(patsubst %.c, %.o, $(C_SRC))
@@ -69,8 +81,18 @@ OBJS     += $(patsubst %.s, %.o, $(AS_SRC_s))
 LIB_SRC   = $(wildcard $(LIBS_SRC_DIR)/*.c)
 OBJS     += $(patsubst %.c, %.o, $(LIB_SRC))
 
+C_SOURCES = $(C_SRC) $(LIB_SRC)
+ASM_SOURCES = $(STARTUP_FILE) $(AS_SRC_S) $(AS_SRC_s)
 
+OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
+vpath %.c $(sort $(dir $(C_SOURCES)))
+# list of ASM program objects
+OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
+vpath %.s $(sort $(dir $(ASM_SOURCES)))
+
+######################################################################
 # Assembly directives.
+######################################################################
 ASFLAGS += -O0
 ASFLAGS += -mcpu=$(MCU_SPEC)
 ASFLAGS += -mthumb
@@ -80,7 +102,9 @@ ASFLAGS += -Wall
 ASFLAGS += -fmessage-length=0
 ASFLAGS += $(FLOAT_SPEC)
 
+######################################################################
 # C compilation directives
+######################################################################
 CFLAGS += -mcpu=$(MCU_SPEC)
 CFLAGS += -mthumb
 CFLAGS += -mthumb-interwork
@@ -95,6 +119,9 @@ CFLAGS += -fmessage-length=0
 # so it can be garbage collected by linker
 CFLAGS += -ffunction-sections
 CFLAGS += -fdata-sections
+# Generate dependency information
+CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
+
 # Add the include folders
 CFLAGS += $(foreach x, $(basename $(INCLUDE_DIR)), -I $(x))
 
@@ -102,13 +129,15 @@ ifeq (1,$(USE_HAL))
 	CFLAGS += -DUSE_HAL_DRIVER=1
 endif
 
+######################################################################
 # Linker directives
+######################################################################
 LSCRIPT = ./$(LD_SCRIPT)
 
 LFLAGS += $(CFLAGS)
 #~ LFLAGS += -nostdlib
 LFLAGS += -T$(LSCRIPT)
-LFLAGS += -Wl,-Map=$(TARGET).map
+LFLAGS += -Wl,-Map=$(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).map
 LFLAGS += -Wl,--print-memory-usage
 LFLAGS += -Wl,--gc-sections
 
@@ -129,64 +158,89 @@ DLIBS       += $(DLIB_SRC:%.c=lib%.so)
 DLIBS_SO  += $(DLIB_SRC:.c=.so)
 DLIBS_O   += $(DLIB_SRC:.c=.o)
 
+######################################################################
+# File targets
+######################################################################
+
 # The PHONY keyword is required so that makefile does not
 # consider the rule 'all' as a file
 .PHONY: all
-all: $(TARGET).bin
+all: debug
 
 # There should be a tab here on the line with $(CC), 4 spaces does not work
-%.o: %.S
+$(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR) 
 	@ echo "[AS] $@"
 	@ $(CC) -x assembler-with-cpp $(ASFLAGS) -c $< -o $@
 
-%.o: %.s
+$(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR) 
 	@ echo "[AS] $@"
 	@ $(CC) -x assembler-with-cpp $(ASFLAGS) -c $< -o $@
 
 # If -c is used then it will create a reloc file ie normal object file
-# and not a dynamic object. For dynamic object -shared is required.
-%.o: %.c
+$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
 	@ echo "[CC] $@"
 	@ $(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
-%.so: %.c
+# and not a dynamic object. For dynamic object -shared is required.
+$(BUILD_DIR)/%.so: %.c Makefile | $(BUILD_DIR) 
 	@ echo "[CC] $@"
 	@ $(CC) -shared $(DLIB_CFLAGS) $< -o lib$@
 
-$(TARGET).diss: $(TARGET).elf
+$(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).diss: $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).elf | $(BUILD_DIR)
 	@ echo "[OD] $@"
 	@ $(OD) -Dz --source $^ > $@
 
-$(TARGET).elf: $(OBJS)
+$(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).elf: $(OBJECTS) | $(BUILD_DIR)
 	@ echo "[LD] $@"
 	@ $(LD) $^ $(LFLAGS) -o $@
 
-$(TARGET).bin: $(TARGET).elf $(TARGET).diss
+$(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).bin: $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).diss | $(BUILD_DIR)
 	@ echo "[OC] $@"
 	@ $(OC) -S -O binary $< $@
 	@ echo "[OS] $@"
 	@ $(OS) $<
 
-########################### build #############################
-# @Brief 
-build:
-	@echo $(STARTUP_FILE)
-################################################################
+$(BUILD_DIR):
+	@ $(MKDIR) $@/$(TARGET_DIR)
 
-########################### clean ############################## 
+######################################################################
+# @Target release
+# @Brief Build executable with optimizations
+######################################################################
+.PHONY: release
+release:DEBUG = 0
+release: $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).bin
+	@ echo "Built Release build"
+
+######################################################################
+# @Target debug
+# @Brief Build executable with debug flags
+######################################################################
+.PHONY: debug
+debug:DEBUG = 1
+debug: $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).bin
+	@ echo "Built Debug build"
+
+######################################################################
+# @Target clean
 # @Brief Remove the target output files.
+######################################################################
 .PHONY: clean
 clean:
-	rm -f $(OBJS) $(DLIBS) $(DLIBS_O)
-	rm -f $(TARGET).elf $(TARGET).bin $(TARGET).list $(TARGET).srec
-	rm -f $(TARGET).diss $(TARGET).map
-################################################################
+	$(RM) $(BUILD_DIR)
 
-########################### flash ##############################
+######################################################################
+# @Target flash
 # @Brief Start GDB, connect to server and load the elf
+######################################################################
 .PHONY: flash
 flash:
 	@pgrep -x "openocd" || (echo "Please start openocd"; exit -1)
 	@echo "Starting GDB client"
-	$(GDB) -ex "target extended :3333" -ex "load $(TARGET).elf" -ex "monitor arm semihosting enable" $(TARGET).elf
-################################################################
+	$(GDB) -ex "target extended :3333" -ex "load $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).elf" -ex "monitor arm semihosting enable" $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).elf
+
+######################################################################
+# @Target Dependencies
+# @Brief 
+######################################################################
+-include $(wildcard $(BUILD_DIR)/*.d)

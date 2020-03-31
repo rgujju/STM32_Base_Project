@@ -1,7 +1,7 @@
 
 #include "stm32f4xx_hal.h"
 
-//~ void SystemClock_Config(void);
+void SystemClock_Config(void);
 
 static GPIO_InitTypeDef  GPIO_InitStruct;
 
