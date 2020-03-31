@@ -10,14 +10,17 @@ MCU = STM32F429xx
 MCU_DIR = ./include/STM32F4xx/
 MCU_SPEC  = cortex-m4
 FLOAT_SPEC = -mfloat-abi=hard -mfpu=fpv4-sp-d16
+# Set the Highspeed external clock value (HSE)
+HSE_VAL = 8000000
 
 # Define the linker script location
 LD_SCRIPT = linker.ld
 
 # set the path to FreeRTOS package
-RTOS_DIR  ?= ./components/FreeRTOS-Kernel
+RTOS_DIR 		= ./components/FreeRTOS-Kernel
 # Modify this to the path where your micrcontroller specific port is
-RTOS_DIR_MCU  ?= $(RTOS_DIR)/portable/GCC/ARM_CM4F
+RTOS_DIR_MCU 	= $(RTOS_DIR)/portable/GCC/ARM_CM4F
+RTOS_HEAP 		= $(RTOS_DIR)/portable/MemMang/heap_4.c
 
 # Dont need to change this if MCU is defined correctly
 # It will add for eg: startup_stm2f429xx.s file to the $(ASM_SOURCES)
@@ -32,9 +35,9 @@ ifeq (1,$(USE_HAL))
 endif
 # Add assembler and C files to this
 AS_SRC_DIR    = src
-C_SRC_DIR     = src $(MCU_DIR)/Source/Templates $(HAL_SRC)
+C_SRC_DIR     = src
 INCLUDE_DIR   = include $(RTOS_DIR)/include $(RTOS_DIR_MCU) $(CMSIS_DIR)/Core/Include $(MCU_DIR)/Include $(HAL_INC)
-LIBS_SRC_DIR  = 
+LIBS_SRC_DIR  = $(RTOS_DIR) $(RTOS_DIR_MCU) $(MCU_DIR)/Source/Templates $(HAL_SRC)
 # Dynamic lib sources
 DLIB_SRC_DIR  = 
 
@@ -68,18 +71,11 @@ CMSIS_DIR = ./components/CMSIS/CMSIS/
 TARGET_DIR = target
 BUILD_DIR  = build
 
-RTOS_SRC      = $(patsubst %.c, %.o, $(wildcard $(RTOS_DIR)/*.c))
-RTOS_MCU_SRC  = $(patsubst %.c, %.o, $(wildcard $(RTOS_DIR_MCU)/*.c))
-OBJS         += $(RTOS_SRC) $(RTOS_MCU_SRC)
-
-C_SRC    += $(foreach DIR, $(basename $(C_SRC_DIR)), $(wildcard $(DIR)/*.c))
-OBJS     += $(patsubst %.c, %.o, $(C_SRC))
+C_SRC     = $(foreach DIR, $(basename $(C_SRC_DIR)), $(wildcard $(DIR)/*.c)) $(RTOS_HEAP)
+LIB_SRC   = $(foreach DIR, $(basename $(LIBS_SRC_DIR)), $(wildcard $(DIR)/*.c))
 AS_SRC_S  = $(foreach DIR, $(basename $(AS_SRC_DIR)), $(wildcard $(DIR)/*.S))
-OBJS     += $(patsubst %.S, %.o, $(AS_SRC_S))
 AS_SRC_s  = $(foreach DIR, $(basename $(AS_SRC_DIR)), $(wildcard $(DIR)/*.s))
-OBJS     += $(patsubst %.s, %.o, $(AS_SRC_s))
-LIB_SRC   = $(wildcard $(LIBS_SRC_DIR)/*.c)
-OBJS     += $(patsubst %.c, %.o, $(LIB_SRC))
+
 
 C_SOURCES = $(C_SRC) $(LIB_SRC)
 ASM_SOURCES = $(STARTUP_FILE) $(AS_SRC_S) $(AS_SRC_s)
@@ -125,6 +121,7 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 # Add the include folders
 CFLAGS += $(foreach x, $(basename $(INCLUDE_DIR)), -I $(x))
 
+CFLAGS += -DHSE_VALUE=$(HSE_VAL)
 ifeq (1,$(USE_HAL))
 	CFLAGS += -DUSE_HAL_DRIVER=1
 endif
