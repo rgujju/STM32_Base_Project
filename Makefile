@@ -20,12 +20,20 @@ RTOS_DIR  ?= ./components/FreeRTOS-Kernel
 RTOS_DIR_MCU  ?= $(RTOS_DIR)/portable/GCC/ARM_CM4F
 CMSIS_DIR ?= ./components/CMSIS/CMSIS/
 
+# Dont need to change this if MCU is defined correctly
 STARTUP_FILE = $(MCU_DIR)/Source/Templates/gcc/startup_$(shell echo "$(MCU)" | awk '{print tolower($$0)}').o
 
+# Select 1 if STM32 HAL library is to be used. This will add -DUSE_HAL_DRIVER=1 to the CFLAGS
+# If enabled then set the correct path of the HAL Driver folder
+USE_HAL = 1
+ifeq (1,$(USE_HAL))
+	HAL_SRC = ./components/STM32F4xx_HAL_Driver/Src
+	HAL_INC = ./components/STM32F4xx_HAL_Driver/Inc
+endif
 # Add assembler and C files to this
 AS_SRC_DIR    = src
-C_SRC_DIR     = src $(MCU_DIR)/Source/Templates
-INCLUDE_DIR   = include $(RTOS_DIR)/include $(RTOS_DIR_MCU) $(CMSIS_DIR)/Core/Include $(MCU_DIR)/Include
+C_SRC_DIR     = src $(MCU_DIR)/Source/Templates $(HAL_SRC)
+INCLUDE_DIR   = include $(RTOS_DIR)/include $(RTOS_DIR_MCU) $(CMSIS_DIR)/Core/Include $(MCU_DIR)/Include $(HAL_INC)
 LIBS_SRC_DIR  = 
 # Dynamic lib sources
 DLIB_SRC_DIR  = 
@@ -90,6 +98,10 @@ CFLAGS += -fdata-sections
 # Add the include folders
 CFLAGS += $(foreach x, $(basename $(INCLUDE_DIR)), -I $(x))
 
+ifeq (1,$(USE_HAL))
+	CFLAGS += -DUSE_HAL_DRIVER=1
+endif
+
 # Linker directives
 LSCRIPT = ./$(LD_SCRIPT)
 
@@ -124,28 +136,36 @@ all: $(TARGET).bin
 
 # There should be a tab here on the line with $(CC), 4 spaces does not work
 %.o: %.S
-	$(CC) -x assembler-with-cpp $(ASFLAGS) -c $< -o $@
+	@ echo "[AS] $@"
+	@ $(CC) -x assembler-with-cpp $(ASFLAGS) -c $< -o $@
 
 %.o: %.s
-	$(CC) -x assembler-with-cpp $(ASFLAGS) -c $< -o $@
+	@ echo "[AS] $@"
+	@ $(CC) -x assembler-with-cpp $(ASFLAGS) -c $< -o $@
 
 # If -c is used then it will create a reloc file ie normal object file
 # and not a dynamic object. For dynamic object -shared is required.
 %.o: %.c
-	$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
+	@ echo "[CC] $@"
+	@ $(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
 %.so: %.c
-	$(CC) -shared $(DLIB_CFLAGS) $< -o lib$@
+	@ echo "[CC] $@"
+	@ $(CC) -shared $(DLIB_CFLAGS) $< -o lib$@
 
 $(TARGET).diss: $(TARGET).elf
-	$(OD) -Dz --source $^ > $@
+	@ echo "[OD] $@"
+	@ $(OD) -Dz --source $^ > $@
 
 $(TARGET).elf: $(OBJS)
-	$(LD) $^ $(LFLAGS) -o $@
+	@ echo "[LD] $@"
+	@ $(LD) $^ $(LFLAGS) -o $@
 
 $(TARGET).bin: $(TARGET).elf $(TARGET).diss
-	$(OC) -S -O binary $< $@
-	$(OS) $<
+	@ echo "[OC] $@"
+	@ $(OC) -S -O binary $< $@
+	@ echo "[OS] $@"
+	@ $(OS) $<
 
 ########################### build #############################
 # @Brief 

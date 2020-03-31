@@ -82,7 +82,7 @@ header file. */
 standard names. */
 #define vPortSVCHandler SVC_Handler
 #define xPortPendSVHandler PendSV_Handler
-#define xPortSysTickHandler SysTick_Handler
+//~ #define xPortSysTickHandler SysTick_Handler
 
 /* A header file that defines trace macro can be included here. */
 
