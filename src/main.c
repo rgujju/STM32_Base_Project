@@ -1,4 +1,5 @@
 
+#include "utilities.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -22,6 +23,15 @@ static void LedBlinky_Task(void *pvParameters){
 
 int main ( void )
 {
+	#if ENABLE_SEMIHOSTING
+		initialise_monitor_handles();
+
+		setbuf(stdout, NULL);
+		//~ setvbuf(stdout, NULL, _IONBF, 0);
+		INFO("Main program start");
+	#endif
+
+
 	HAL_Init();
 	SystemClock_Config();
 
@@ -50,12 +60,6 @@ int main ( void )
 	
 	return 0;
 }
-
-//~ void SysTick_Handler(void){
-
-	//~ HAL_IncTick();
-
-//~ }
 
 void SystemClock_Config(void)
 {
@@ -93,17 +97,4 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-
-	while(1){
-		
-	}
-
-  /* USER CODE END Error_Handler_Debug */
 }

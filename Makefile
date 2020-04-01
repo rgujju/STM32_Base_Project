@@ -10,8 +10,12 @@ MCU = STM32F429xx
 MCU_DIR = ./include/STM32F4xx/
 MCU_SPEC  = cortex-m4
 FLOAT_SPEC = -mfloat-abi=hard -mfpu=fpv4-sp-d16
+
 # Set the Highspeed external clock value (HSE)
 HSE_VAL = 8000000
+
+# Enable ARM Semihosting support
+ENABLE_SEMIHOSTING = 1
 
 # Define the linker script location
 LD_SCRIPT = linker.ld
@@ -115,15 +119,21 @@ CFLAGS += -fmessage-length=0
 # so it can be garbage collected by linker
 CFLAGS += -ffunction-sections
 CFLAGS += -fdata-sections
+
 # Generate dependency information
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
-
 # Add the include folders
 CFLAGS += $(foreach x, $(basename $(INCLUDE_DIR)), -I $(x))
 
+# C macros
 CFLAGS += -DHSE_VALUE=$(HSE_VAL)
+
 ifeq (1,$(USE_HAL))
 	CFLAGS += -DUSE_HAL_DRIVER=1
+endif
+
+ifeq (1,$(ENABLE_SEMIHOSTING))
+	CFLAGS += -DENABLE_SEMIHOSTING=1
 endif
 
 ######################################################################
@@ -137,6 +147,10 @@ LFLAGS += -T$(LSCRIPT)
 LFLAGS += -Wl,-Map=$(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).map
 LFLAGS += -Wl,--print-memory-usage
 LFLAGS += -Wl,--gc-sections
+
+ifeq (1,$(ENABLE_SEMIHOSTING))
+	LFLAGS += --specs=rdimon.specs -lc -lrdimon
+endif
 
 # Dynamic lib Compilation flags
 DLIB_CFLAGS += -mcpu=$(MCU_SPEC)
