@@ -29,6 +29,7 @@ RTOS_HEAP 		= $(RTOS_DIR)/portable/MemMang/heap_4.c
 # Dont need to change this if MCU is defined correctly
 # It will add for eg: startup_stm2f429xx.s file to the $(ASM_SOURCES)
 STARTUP_FILE = $(MCU_DIR)/Source/Templates/gcc/startup_$(shell echo "$(MCU)" | awk '{print tolower($$0)}').s
+SYSTEM_FILE  = $(MCU_DIR)/Source/Templates/system_stm32f4xx.c
 
 # Select 1 if STM32 HAL library is to be used. This will add -DUSE_HAL_DRIVER=1 to the CFLAGS
 # If enabled then set the correct path of the HAL Driver folder
@@ -74,6 +75,7 @@ MKDIR 	= mkdir -p
 CMSIS_DIR = ./components/CMSIS/CMSIS/
 TARGET_DIR = target
 BUILD_DIR  = build
+TEST_DIR   = test
 
 C_SRC     = $(foreach DIR, $(basename $(C_SRC_DIR)), $(wildcard $(DIR)/*.c)) $(RTOS_HEAP)
 LIB_SRC   = $(foreach DIR, $(basename $(LIBS_SRC_DIR)), $(wildcard $(DIR)/*.c))
@@ -89,6 +91,22 @@ vpath %.c $(sort $(dir $(C_SOURCES)))
 # list of ASM program objects
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
+
+######################################################################
+# Test Sources and Objects
+######################################################################
+
+TEST_SRC_DIR = $(TEST_DIR)/unity $(TEST_DIR)/src $(TEST_DIR)/fakes
+TEST_MODULE  = src/simple_module.c
+
+TEST_C_SOURCES = $(TEST_MODULE) $(foreach DIR, $(basename $(TEST_SRC_DIR)), $(wildcard $(DIR)/*.c)) $(SYSTEM_FILE)
+TEST_ASM_SOURCES = $(STARTUP_FILE)
+TEST_INCLUDE_DIR = include $(TEST_DIR)/unity $(TEST_DIR)/fakes
+
+TEST_OBJECTS  = $(addprefix $(BUILD_DIR)/,$(notdir $(TEST_C_SOURCES:.c=.o)))
+vpath %.c $(sort $(dir $(TEST_C_SOURCES)))
+TEST_OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(TEST_ASM_SOURCES:.s=.o)))
+vpath %.s $(sort $(dir $(TEST_ASM_SOURCES)))
 
 ######################################################################
 # Assembly directives.
@@ -211,6 +229,23 @@ $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).bin: $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).e
 	@ echo "[OS] $@"
 	@ $(OS) $<
 
+
+
+$(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).diss: $(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).elf | $(BUILD_DIR)
+	@ echo "[OD] $@"
+	@ $(OD) -Dz --source $^ > $@
+
+$(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).elf: $(TEST_OBJECTS) | $(BUILD_DIR)
+	@ echo "[LD] $@"
+	$(LD) $^ $(LFLAGS) -o $@
+
+$(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).bin: $(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).elf $(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).diss | $(BUILD_DIR)
+	@ echo "[OC] $@"
+	@ $(OC) -S -O binary $< $@
+	@ echo "[OS] $@"
+	@ $(OS) $<
+
+
 $(BUILD_DIR):
 	@ $(MKDIR) $@/$(TARGET_DIR)
 
@@ -233,6 +268,17 @@ debug: $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).bin
 	@ echo "Built Debug build"
 
 ######################################################################
+# @Target tests
+# @Brief Build test case binary
+######################################################################
+.PHONY: tests
+tests:DEBUG = 1
+tests:CFLAGS += $(foreach x, $(basename $(TEST_INCLUDE_DIR)), -I $(x))
+tests: $(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).bin
+	@ echo "Built Test build"
+
+
+######################################################################
 # @Target clean
 # @Brief Remove the target output files.
 ######################################################################
@@ -249,6 +295,16 @@ flash:
 	@pgrep -x "openocd" || (echo "Please start openocd"; exit -1)
 	@echo "Starting GDB client"
 	$(GDB) -ex "target extended :3333" -ex "load $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).elf" -ex "monitor arm semihosting enable" $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).elf
+
+######################################################################
+# @Target test_flash
+# @Brief Start GDB, connect to server and load the test elf
+######################################################################
+.PHONY: test_flash
+test_flash:
+	@pgrep -x "openocd" || (echo "Please start openocd"; exit -1)
+	@echo "Starting GDB client"
+	$(GDB) -ex "target extended :3333" -ex "load $(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).elf" -ex "monitor arm semihosting enable" $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).elf
 
 ######################################################################
 # @Target Dependencies
