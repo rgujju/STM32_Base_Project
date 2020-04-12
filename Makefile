@@ -29,7 +29,7 @@ RTOS_HEAP 		= $(RTOS_DIR)/portable/MemMang/heap_4.c
 # Dont need to change this if MCU is defined correctly
 # It will add for eg: startup_stm2f429xx.s file to the $(ASM_SOURCES)
 STARTUP_FILE = $(MCU_DIR)/Source/Templates/gcc/startup_$(shell echo "$(MCU)" | awk '{print tolower($$0)}').s
-
+SYSTEM_FILE  = $(MCU_DIR)/Source/Templates/system_stm32f4xx.c
 # Select 1 if STM32 HAL library is to be used. This will add -DUSE_HAL_DRIVER=1 to the CFLAGS
 # If enabled then set the correct path of the HAL Driver folder
 USE_HAL = 1
@@ -89,6 +89,14 @@ vpath %.c $(sort $(dir $(C_SOURCES)))
 # list of ASM program objects
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
+
+TEST_C_SOURCES = $(SYSTEM_FILE) ./components/cmocka/cmocka.c tests/simple_test.c
+TEST_ASM_SOURCES = $(STARTUP_FILE)
+
+TEST_OBJECTS  = $(addprefix $(BUILD_DIR)/,$(notdir $(TEST_C_SOURCES:.c=.o)))
+vpath %.c $(sort $(dir $(TEST_C_SOURCES)))
+TEST_OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(TEST_ASM_SOURCES:.s=.o)))
+vpath %.s $(sort $(dir $(TEST_ASM_SOURCES)))
 
 ######################################################################
 # Assembly directives.
@@ -190,7 +198,7 @@ $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 # If -c is used then it will create a reloc file ie normal object file
 $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
 	@ echo "[CC] $@"
-	@ $(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
+	@ $(CC) $(CFLAGS) $(INCLUDE) $(HEADER_INCLUDE) -c $< -o $@
 
 # and not a dynamic object. For dynamic object -shared is required.
 $(BUILD_DIR)/%.so: %.c Makefile | $(BUILD_DIR) 
@@ -210,6 +218,23 @@ $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).bin: $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).e
 	@ $(OC) -S -O binary $< $@
 	@ echo "[OS] $@"
 	@ $(OS) $<
+
+
+
+$(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).diss: $(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).elf | $(BUILD_DIR)
+	@ echo "[OD] $@"
+	@ $(OD) -Dz --source $^ > $@
+
+$(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).elf: $(TEST_OBJECTS) | $(BUILD_DIR)
+	@ echo "[LD] $@"
+	$(LD) $^ $(LFLAGS) -o $@
+
+$(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).bin: $(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).elf $(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).diss | $(BUILD_DIR)
+	@ echo "[OC] $@"
+	@ $(OC) -S -O binary $< $@
+	@ echo "[OS] $@"
+	@ $(OS) $<
+
 
 $(BUILD_DIR):
 	@ $(MKDIR) $@/$(TARGET_DIR)
@@ -231,6 +256,17 @@ release: $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).bin
 debug:DEBUG = 1
 debug: $(BUILD_DIR)/$(TARGET_DIR)/$(TARGET).bin
 	@ echo "Built Debug build"
+
+######################################################################
+# @Target tests
+# @Brief Build test case binary
+######################################################################
+.PHONY: tests
+tests:DEBUG = 1
+tests:INCLUDE_DIR += components/cmocka
+tests: $(BUILD_DIR)/$(TARGET_DIR)/test_$(TARGET).bin
+	@ echo "Built Test build"
+
 
 ######################################################################
 # @Target clean
