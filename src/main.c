@@ -23,7 +23,7 @@ static void LedBlinky_Task(void *pvParameters){
 
 int main ( void )
 {
-	#if ENABLE_SEMIHOSTING
+	#if SEMIHOSTING
 		initialise_monitor_handles();
 
 		setbuf(stdout, NULL);

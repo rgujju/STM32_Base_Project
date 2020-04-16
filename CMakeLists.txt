@@ -1,4 +1,14 @@
 cmake_minimum_required(VERSION 3.11.1)
+
+if(NOT CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE ../cross.cmake)
+    message(WARNING "[WARN] CMAKE_TOOLCHAIN_FILE not specified: Using ${CMAKE_TOOLCHAIN_FILE} by default")
+endif()
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+    message(WARNING "[WARN] CMAKE_BUILD_TYPE not specified: Using ${CMAKE_BUILD_TYPE} by default")
+endif()
+
 set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 
 #################### CONFIGURABLE SECTION ###########################
@@ -32,9 +42,6 @@ set(SYSTEM_FILE  ${MCU_DIR}/Source/Templates/system_stm32f4xx.c)
 # Set the Highspeed external clock value (HSE) in MHz
 set(HSE_VAL 8000000)
 
-# Control ARM Semihosting support
-set(ENABLE_SEMIHOSTING 1)
-
 # Define the linker script location
 set(LINKER_SCRIPT linker.ld)
 
@@ -60,17 +67,8 @@ set(RTOS_HEAP    ${RTOS_DIR}/portable/MemMang/heap_4.c) # Select which heap impl
 #-------------------
 # CMSIS Setup
 #-------------------
-# Set the path to required CMSIS folde
-set(CMSIS_DIR components/CMSIS/CMSIS/)
-
-#-------------------
-# Toolchain Setup
-#-------------------
-# Uncomment below to set path to the CROSS_TOOLCHAIN
-# Keep slash at the end
-#set(TOOLCHAIN_BIN_DIR /usr/local/bin/)
-set(CROSS_TOOLCHAIN arm-none-eabi-)
-set(HOST_TOOLCHAIN )
+# Set the path to the CMSIS folder
+set(CMSIS_DIR components/CMSIS/CMSIS)
 
 #################### ADVANCED SECTION ###########################
 
@@ -115,11 +113,33 @@ ${OBJECT_GEN_FLAGS} \
 -Wl,--gc-sections \
 " CACHE INTERNAL "Linker options")
 
+#------------------
+# Debug Flags
+#------------------
+set(CMAKE_C_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf" CACHE INTERNAL "C Compiler options for debug build type")
+set(CMAKE_CXX_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf" CACHE INTERNAL "C++ Compiler options for debug build type")
+set(CMAKE_ASM_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf" CACHE INTERNAL "ASM Compiler options for debug build type")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "" CACHE INTERNAL "Linker options for debug build type")
+
+#------------------
+# Release Flags
+#-----------------
+set(CMAKE_C_FLAGS_RELEASE "-Os -flto" CACHE INTERNAL "C Compiler options for release build type")
+set(CMAKE_CXX_FLAGS_RELEASE "-Os -flto" CACHE INTERNAL "C++ Compiler options for release build type")
+set(CMAKE_ASM_FLAGS_RELEASE "" CACHE INTERNAL "ASM Compiler options for release build type")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-flto -Wl,--undefined=vTaskSwitchContext" CACHE INTERNAL "Linker options for release build type")
+
+# Control ARM Semihosting support
+if(NOT SEMIHOSTING)
+    set(SEMIHOSTING 1)
+    message(WARNING "[WARN] Semihosting support not specified: Enabling by default")
+endif()
+
 ######################################################################
 # @Target: ${PROJECT_NAME}.elf
 # @Brief: Build the actual elf file of the project
 ######################################################################
-message("[INFO] Startup file used is ${STARTUP_FILE}")
+message(STATUS "[INFO] Startup file used is ${STARTUP_FILE}")
 
 #-------------------
 # HAL library
@@ -187,22 +207,13 @@ target_compile_definitions(${PROJECT_NAME}.elf
     PUBLIC
     ${MCU}
     HSE_VALUE=${HSE_VAL}
-    ENABLE_SEMIHOSTING=${ENABLE_SEMIHOSTING}
-    )
-set_target_properties(${PROJECT_NAME}.elf
-    PROPERTIES TOOLCHAIN ${CROSS_TOOLCHAIN}
+    SEMIHOSTING=${SEMIHOSTING}
     )
 
-if(${ENABLE_SEMIHOSTING} STREQUAL "1")
-    target_link_options(${PROJECT_NAME}.elf
-        PUBLIC
-        --specs=rdimon.specs -lc -lrdimon
-        )
+if("${SEMIHOSTING}" STREQUAL "1")
+    string(APPEND CMAKE_EXE_LINKER_FLAGS "--specs=rdimon.specs -lc -lrdimon")
 else()
-    target_link_options(${PROJECT_NAME}.elf
-        PUBLIC
-        -specs=nosys.specs
-        )
+    string(APPEND CMAKE_EXE_LINKER_FLAGS "--specs=nosys.specs")
 endif()
 
 ######################################################################
@@ -213,27 +224,14 @@ add_custom_target(flash DEPENDS ${PROJECT_NAME}.elf)
 add_custom_command(TARGET flash
     #COMMAND bash "-c" "pgrep -x \"openocd\" || (echo \"Please start openocd\" && exit -1)"
     COMMAND echo "Starting GDB client"
-    COMMAND ${CMAKE_C_GDB} ${PROJECT_NAME}.elf -ex "target extended :3333" -ex "load ${PROJECT_NAME}.elf" -ex "monitor arm semihosting enable"
+    COMMAND ${CMAKE_C_GDB} ${PROJECT_NAME}.elf
+    -ex "target extended :3333"
+    -ex "load ${PROJECT_NAME}.elf"
+    -ex "monitor arm semihosting enable"
     )
 
-
-#-----------------------------
-# Compiler and generic options
-#-----------------------------
-set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_PROCESSOR arm)
-set(CMAKE_CROSSCOMPILING 1)
-
-set(CMAKE_C_COMPILER ${TOOLCHAIN_BIN_DIR}${CROSS_TOOLCHAIN}gcc${TOOLCHAIN_EXT} CACHE INTERNAL "C Compiler")
-set(CMAKE_CXX_COMPILER ${TOOLCHAIN_BIN_DIR}${CROSS_TOOLCHAIN}g++${TOOLCHAIN_EXT} CACHE INTERNAL "C++ Compiler")
-set(CMAKE_ASM_COMPILER ${TOOLCHAIN_BIN_DIR}${CROSS_TOOLCHAIN}gcc${TOOLCHAIN_EXT} CACHE INTERNAL "ASM Compiler")
-set(CMAKE_OBJCOPY ${TOOLCHAIN_BIN_DIR}${CROSS_TOOLCHAIN}objcopy CACHE INTERNAL "Objcopy tool")
-set(CMAKE_SIZE_UTIL ${TOOLCHAIN_BIN_DIR}${CROSS_TOOLCHAIN}size CACHE INTERNAL "Size tool")
-set(CMAKE_C_GDB ${TOOLCHAIN_BIN_DIR}${CROSS_TOOLCHAIN}gdb-py CACHE INTERNAL "Debugger")
-
-set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-
-
+# Unset all cache
+unset(SEMIHOSTING)
+unset(CMAKE_TOOLCHAIN_FILE)
+unset(CMAKE_BUILD_TYPE)
 

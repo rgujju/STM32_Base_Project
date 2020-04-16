@@ -8,7 +8,7 @@
 #define WARN_EN 1
 #define ERRR_EN 1
 
-#if ENABLE_SEMIHOSTING
+#if SEMIHOSTING
 extern void initialise_monitor_handles(void);
 #define DBUG(fmt...) if(DBUG_EN){printf("[DBUG] " fmt); printf("\n");}
 #define INFO(fmt...) if(INFO_EN){printf("[INFO] " fmt); printf("\n");}
@@ -22,7 +22,7 @@ extern void initialise_monitor_handles(void);
 #define INFO_CUST_S(fmt...) if(INFO_EN){printf("[INFO] " fmt);}
 #define INFO_CUST_C(fmt...) if(INFO_EN){printf(fmt);}
 #define INFO_CUST_E(fmt...) if(INFO_EN){printf(fmt "\n");}
-#endif /* ENABLE_SEMIHOSTING */
+#endif /* SEMIHOSTING */
 
 #if !defined  (Error_Handler)
 extern void Default_Handler(void);
