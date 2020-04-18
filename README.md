@@ -20,6 +20,9 @@
    list(APPEND tests_names "test_<module_name>")
    list(APPEND tests_flags " ")
    ```
+- To add new modules, copy the **modules/simple_module** to **modules/<your_module_name>** and rename simple_module with ``<your_module_name>`` in the CMakeLists.txt file, 
+  and add ``add_subdirectory(<your_module_name>)`` to the **modules/CMakeLists.txt**.
+  Finally add ``<your_module_name>`` to the *MODULES_USED* variable in **CMakeLists.txt** in the project root. 
 
 #### Build Tests for host
 ``mkdir -p build/test``  

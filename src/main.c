@@ -6,6 +6,8 @@
 
 #include "stm32f4xx_hal.h"
 
+#include "simple_module.h"
+
 void SystemClock_Config(void);
 
 static GPIO_InitTypeDef  GPIO_InitStruct;
@@ -43,6 +45,8 @@ int main ( void )
 	GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
 
 	HAL_GPIO_Init(LED1_PORT, &GPIO_InitStruct);
+    // calling something from the modules
+    SomethingSimple(2,7);
 
 	xTaskCreate( LedBlinky_Task,						/* The function that implements the task. */
 				"LedBlinky", 							/* The text name assigned to the task - for debug only as it is not used by the kernel. */

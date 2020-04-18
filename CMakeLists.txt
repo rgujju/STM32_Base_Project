@@ -19,6 +19,12 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 enable_language(C ASM)
 project(main VERSION 1.0)
 
+#------------------
+# Modules Setup
+#------------------
+set(MODULES_USED
+    simple_module
+    )
 #-------------------
 # MCU Setup
 #-------------------
@@ -73,7 +79,7 @@ set(CMSIS_DIR components/CMSIS/CMSIS)
 #################### ADVANCED SECTION ###########################
 
 # Control ARM Semihosting support
-if(NOT SEMIHOSTING AND NOT ${SEMIHOSTING} STREQUAL "0")
+if(NOT SEMIHOSTING)
     set(SEMIHOSTING 1)
     message(WARNING "[WARN] Semihosting support not specified: Enabling by default")
 endif()
@@ -85,7 +91,7 @@ endif()
 ######################################################################
 message(STATUS "[INFO] Startup file used is ${STARTUP_FILE}")
 
-#add_subdirectory(modules)
+add_subdirectory(modules)
 
 # Control specific options if crosscompiling
 if(CMAKE_CROSSCOMPILING STREQUAL "1")
