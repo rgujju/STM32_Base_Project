@@ -2,6 +2,7 @@
 #pragma once
 
 #include <stdio.h>
+#include<stdint.h>
 
 #define DBUG_EN 1
 #define INFO_EN 1

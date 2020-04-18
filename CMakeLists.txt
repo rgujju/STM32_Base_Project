@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.11.1)
 
-if(NOT CMAKE_TOOLCHAIN_FILE)
-    set(CMAKE_TOOLCHAIN_FILE ../cross.cmake)
-    message(WARNING "[WARN] CMAKE_TOOLCHAIN_FILE not specified: Using ${CMAKE_TOOLCHAIN_FILE} by default")
-endif()
+#if(NOT CMAKE_TOOLCHAIN_FILE)
+#set(CMAKE_TOOLCHAIN_FILE ../cross.cmake)
+#message(WARNING "[WARN] CMAKE_TOOLCHAIN_FILE not specified: Using ${CMAKE_TOOLCHAIN_FILE} by default")
+#endif()
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
     message(WARNING "[WARN] CMAKE_BUILD_TYPE not specified: Using ${CMAKE_BUILD_TYPE} by default")
@@ -72,68 +72,12 @@ set(CMSIS_DIR components/CMSIS/CMSIS)
 
 #################### ADVANCED SECTION ###########################
 
-#-------------------
-# General Flags
-#-------------------
-set(OBJECT_GEN_FLAGS " \
--mcpu=${MCU_SPEC} \
--mthumb \
--fno-builtin \
--Wall \
--ffunction-sections -fdata-sections \
--fomit-frame-pointer \
--mthumb-interwork \
--mabi=aapcs \
-${FLOAT_SPEC} \
-")
-
-#-------------------
-# CFLAGS
-#-------------------
-set(CMAKE_C_FLAGS " \
-${OBJECT_GEN_FLAGS} \
-" CACHE INTERNAL "C Compiler options")
-
-#-------------------
-#ASMFLAGS
-#-------------------
-set(CMAKE_ASM_FLAGS " \
-${OBJECT_GEN_FLAGS} \
--x assembler-with-cpp \
-" CACHE INTERNAL "ASM Compiler options")
-
-#-------------------
-# LFLAGS
-#-------------------
-set(CMAKE_EXE_LINKER_FLAGS " \
-${OBJECT_GEN_FLAGS} \
--T../${LINKER_SCRIPT} \
--Wl,-Map=${PROJECT_NAME}.map \
--Wl,--print-memory-usage \
--Wl,--gc-sections \
-" CACHE INTERNAL "Linker options")
-
-#------------------
-# Debug Flags
-#------------------
-set(CMAKE_C_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf" CACHE INTERNAL "C Compiler options for debug build type")
-set(CMAKE_CXX_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf" CACHE INTERNAL "C++ Compiler options for debug build type")
-set(CMAKE_ASM_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf" CACHE INTERNAL "ASM Compiler options for debug build type")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "" CACHE INTERNAL "Linker options for debug build type")
-
-#------------------
-# Release Flags
-#-----------------
-set(CMAKE_C_FLAGS_RELEASE "-Os -flto" CACHE INTERNAL "C Compiler options for release build type")
-set(CMAKE_CXX_FLAGS_RELEASE "-Os -flto" CACHE INTERNAL "C++ Compiler options for release build type")
-set(CMAKE_ASM_FLAGS_RELEASE "" CACHE INTERNAL "ASM Compiler options for release build type")
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-flto -Wl,--undefined=vTaskSwitchContext" CACHE INTERNAL "Linker options for release build type")
-
 # Control ARM Semihosting support
-if(NOT SEMIHOSTING)
+if(NOT SEMIHOSTING AND NOT ${SEMIHOSTING} STREQUAL "0")
     set(SEMIHOSTING 1)
     message(WARNING "[WARN] Semihosting support not specified: Enabling by default")
 endif()
+
 
 ######################################################################
 # @Target: ${PROJECT_NAME}.elf
@@ -141,79 +85,185 @@ endif()
 ######################################################################
 message(STATUS "[INFO] Startup file used is ${STARTUP_FILE}")
 
-#-------------------
-# HAL library
-#-------------------
-file(GLOB HAL_SRC
-    "${HAL_DIR}/Src/*.c"
-    )
-add_library(hal STATIC
-    ${HAL_SRC}
-    )
-target_include_directories(hal
-    PUBLIC
-    ${HAL_DIR}/Inc
-    ${MCU_DIR}/Include
-    ${CMSIS_DIR}/Core/Include
-    PRIVATE
-    ${PROJECT_SOURCE_DIR}/include
-    )
-target_compile_definitions(hal
-    PUBLIC
-    ${MCU}
-    HSE_VALUE=${HSE_VAL}
-    )
+#add_subdirectory(modules)
 
-#-------------------
-# FreeRTOS library
-#-------------------
-file(GLOB RTOS_SRC
-    "${RTOS_DIR}/*.c"
-    "${RTOS_DIR_MCU}/*.c"
-    )
-add_library(rtos STATIC
-    ${RTOS_SRC}
-    ${RTOS_HEAP}
-    )
-target_include_directories(rtos
-    PUBLIC
-    ${RTOS_DIR}/include
-    ${RTOS_DIR_MCU}
-    PRIVATE
-    ${PROJECT_SOURCE_DIR}/include
-    )
+# Control specific options if crosscompiling
+if(CMAKE_CROSSCOMPILING STREQUAL "1")
+    message(STATUS "[INFO] Cross compiling for ${MCU}")
+    #-------------------
+    # General Flags
+    #-------------------
+    set(OBJECT_GEN_FLAGS " \
+    -mcpu=${MCU_SPEC} \
+    -mthumb \
+    -fno-builtin \
+    -Wall \
+    -ffunction-sections -fdata-sections \
+    -fomit-frame-pointer \
+    -mthumb-interwork \
+    -mabi=aapcs \
+    ${FLOAT_SPEC} \
+    " CACHE INTERNAL "Common flags for C/CXX/ASM/Linker")
 
-#-------------------
-# Main elf
-#-------------------
-set(SOURCES
-    src/main.c
-    ${STARTUP_FILE}
-    ${SYSTEM_FILE}
-    )
-add_executable(${PROJECT_NAME}.elf
-    ${SOURCES}
-    )
-target_include_directories(${PROJECT_NAME}.elf
-    PUBLIC
-    ${PROJECT_SOURCE_DIR}/include
-    )
-target_link_libraries(${PROJECT_NAME}.elf
-    PUBLIC
-    rtos
-    hal
-    )
-target_compile_definitions(${PROJECT_NAME}.elf
-    PUBLIC
-    ${MCU}
-    HSE_VALUE=${HSE_VAL}
-    SEMIHOSTING=${SEMIHOSTING}
-    )
+    #-------------------
+    # CFLAGS
+    #-------------------
+    set(CMAKE_C_FLAGS " \
+    ${OBJECT_GEN_FLAGS} \
+    " CACHE INTERNAL "C Compiler options")
 
-if("${SEMIHOSTING}" STREQUAL "1")
-    string(APPEND CMAKE_EXE_LINKER_FLAGS "--specs=rdimon.specs -lc -lrdimon")
+    #-------------------
+    #ASMFLAGS
+    #-------------------
+    set(CMAKE_ASM_FLAGS " \
+    ${OBJECT_GEN_FLAGS} \
+    -x assembler-with-cpp \
+    " CACHE INTERNAL "ASM Compiler options")
+
+    #-------------------
+    # LFLAGS
+    #-------------------
+    set(CMAKE_EXE_LINKER_FLAGS " \
+    ${OBJECT_GEN_FLAGS} \
+    -Wl,-Map=${PROJECT_NAME}.map \
+    -Wl,--print-memory-usage \
+    -Wl,--gc-sections \
+    " CACHE INTERNAL "Linker options")
+
+    #------------------
+    # Debug Flags
+    #------------------
+    set(CMAKE_C_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf " CACHE INTERNAL "C Compiler options for debug build type")
+    set(CMAKE_CXX_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf " CACHE INTERNAL "C++ Compiler options for debug build type")
+    set(CMAKE_ASM_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf " CACHE INTERNAL "ASM Compiler options for debug build type")
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "" CACHE INTERNAL "Linker options for debug build type")
+
+    #------------------
+    # Release Flags
+    #-----------------
+    set(CMAKE_C_FLAGS_RELEASE "-Os -flto " CACHE INTERNAL "C Compiler options for release build type")
+    set(CMAKE_CXX_FLAGS_RELEASE "-Os -flto " CACHE INTERNAL "C++ Compiler options for release build type")
+    set(CMAKE_ASM_FLAGS_RELEASE "" CACHE INTERNAL "ASM Compiler options for release build type")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-flto " CACHE INTERNAL "Linker options for release build type")
+
+
+    find_file(LINKER_SCRIPT_PATH
+        NAMES "${LINKER_SCRIPT}"
+        PATHS
+        ${CMAKE_CURRENT_LIST_DIR}
+        )
+
+    if(DEFINED LINKER_SCRIPT_PATH)
+        message(STATUS "[INFO] Using linker file at ${LINKER_SCRIPT_PATH}")
+        string(APPEND CMAKE_EXE_LINKER_FLAGS "-T${LINKER_SCRIPT_PATH} ")
+    else()
+        message(FATAL_ERROR "[ERRR] Could not find linker script ${LINKER_SCRIPT}")
+    endif()
+
+    if("${SEMIHOSTING}" STREQUAL "1")
+        string(APPEND CMAKE_EXE_LINKER_FLAGS "--specs=rdimon.specs -lc -lrdimon ")
+    else()
+        string(APPEND CMAKE_EXE_LINKER_FLAGS "--specs=nosys.specs ")
+    endif()
+
+endif()
+
+# Actual build which will go onto the board
+if(TARGET_GROUP STREQUAL production)
+    #-------------------
+    # HAL library
+    #-------------------
+    file(GLOB HAL_SRC
+        "${HAL_DIR}/Src/*.c"
+        )
+    set(HAL_INC
+        ${HAL_DIR}/Inc
+        ${MCU_DIR}/Include
+        ${CMSIS_DIR}/Core/Include
+        )
+    #add_library(hal STATIC
+    #    ${HAL_SRC}
+    #    )
+    #target_include_directories(hal
+    #    PUBLIC
+    #    ${HAL_DIR}/Inc
+    #    ${MCU_DIR}/Include
+    #    ${CMSIS_DIR}/Core/Include
+    #    PRIVATE
+    #    ${PROJECT_SOURCE_DIR}/include
+    #    )
+    #target_compile_definitions(hal
+    #    PUBLIC
+    #    ${MCU}
+    #    HSE_VALUE=${HSE_VAL}
+    #    )
+
+    #-------------------
+    # FreeRTOS library
+    #-------------------
+    string(APPEND CMAKE_EXE_LINKER_FLAGS_RELEASE "-Wl,--undefined=vTaskSwitchContext ")
+    file(GLOB RTOS_SRC
+        "${RTOS_DIR}/*.c"
+        "${RTOS_DIR_MCU}/*.c"
+        ${RTOS_SRC}
+        ${RTOS_HEAP}
+        )
+    set(RTOS_INC
+        ${RTOS_DIR}/include
+        ${RTOS_DIR_MCU}
+        )
+    #add_library(rtos STATIC
+    #    ${RTOS_SRC}
+    #    ${RTOS_HEAP}
+    #    )
+    #target_include_directories(rtos
+    #    PUBLIC
+    #    ${RTOS_DIR}/include
+    #    ${RTOS_DIR_MCU}
+    #    PRIVATE
+    #    ${PROJECT_SOURCE_DIR}/include
+    #    )
+
+    #-------------------
+    # Main elf
+    #-------------------
+    set(SOURCES
+        src/main.c
+        ${STARTUP_FILE}
+        ${SYSTEM_FILE}
+        ${RTOS_SRC}
+        ${HAL_SRC}
+        )
+    add_executable(${PROJECT_NAME}.elf
+        ${SOURCES}
+        )
+    target_include_directories(${PROJECT_NAME}.elf
+        PUBLIC
+        ${PROJECT_SOURCE_DIR}/include
+        ${RTOS_INC}
+        ${HAL_INC}
+        )
+    target_compile_definitions(${PROJECT_NAME}.elf
+        PUBLIC
+        ${MCU}
+        HSE_VALUE=${HSE_VAL}
+        SEMIHOSTING=${SEMIHOSTING}
+        )
+
+elseif(TARGET_GROUP STREQUAL test)
+
+    add_library(unity STATIC
+        components/unity/unity.c
+        )
+
+    target_include_directories(unity PUBLIC
+        components/unity/
+        )
+
+    include(CTest)
+    add_subdirectory(test)
 else()
-    string(APPEND CMAKE_EXE_LINKER_FLAGS "--specs=nosys.specs")
+    message(FATAL_ERROR "Given TARGET_GROUP unknown")
 endif()
 
 ######################################################################
@@ -223,9 +273,10 @@ endif()
 add_custom_target(flash DEPENDS ${PROJECT_NAME}.elf)
 add_custom_command(TARGET flash
     #COMMAND bash "-c" "pgrep -x \"openocd\" || (echo \"Please start openocd\" && exit -1)"
-    COMMAND echo "Starting GDB client"
+    COMMAND echo "Starting GDB client and loading ${PROJECT_NAME}.elf dashboard to $(GDB_TTY)"
     COMMAND ${CMAKE_C_GDB} ${PROJECT_NAME}.elf
     -ex "target extended :3333"
+    -ex "dashboard -output $(GDB_TTY)"
     -ex "load ${PROJECT_NAME}.elf"
     -ex "monitor arm semihosting enable"
     )
