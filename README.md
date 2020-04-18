@@ -14,17 +14,16 @@
 - Debug build is the default build if ``CMAKE_BUILD_TYPE`` is not specified during cross-compiling  
 - ARM Semihosting is turned on by default. To turn off use ``-DSEMIHOSTING=0``. ``SEMIHOSTING`` is also a macro which is set if ARM semihosting is enabled.  
 - Most of the values like HSE, linker script, RTOS path, HAL path, CMSIS path, etc can be set in the configurable section of CMakeLists.txt in project root.  
-- For testing add two lines as follows in **test/CMakeLists.txt**  
-
-   ```
-   list(APPEND tests_names "test_<module_name>")
-   list(APPEND tests_flags " ")
-   ```
-- To add new modules, copy the **modules/simple_module** to **modules/<your_module_name>** and rename simple_module with ``<your_module_name>`` in the CMakeLists.txt file, 
+- To add new modules, copy **modules/simple_module** to **modules/<your_module_name>** and rename simple_module with ``<your_module_name>`` in the CMakeLists.txt file, 
   and add ``add_subdirectory(<your_module_name>)`` to the **modules/CMakeLists.txt**.
   Finally add ``<your_module_name>`` to the *MODULES_USED* variable in **CMakeLists.txt** in the project root. 
+- For adding test for the modules, create **test/test_<your_module_name>** and add two lines as follows in **test/CMakeLists.txt**  
 
-#### Build Tests for host
+   ```
+   list(APPEND tests_names "test_<your_module_name>")
+   list(APPEND tests_flags " ")
+   ```
+-#### Build Tests for host
 ``mkdir -p build/test``  
 ``cmake ../.. -DTARGET_GROUP=test``  
 To run the tests  

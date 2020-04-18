@@ -182,27 +182,22 @@ if(TARGET_GROUP STREQUAL production)
     file(GLOB HAL_SRC
         "${HAL_DIR}/Src/*.c"
         )
-    set(HAL_INC
+    add_library(hal STATIC
+        ${HAL_SRC}
+        )
+    target_include_directories(hal
+        PUBLIC
         ${HAL_DIR}/Inc
         ${MCU_DIR}/Include
         ${CMSIS_DIR}/Core/Include
+        PRIVATE
+        ${PROJECT_SOURCE_DIR}/include
         )
-    #add_library(hal STATIC
-    #    ${HAL_SRC}
-    #    )
-    #target_include_directories(hal
-    #    PUBLIC
-    #    ${HAL_DIR}/Inc
-    #    ${MCU_DIR}/Include
-    #    ${CMSIS_DIR}/Core/Include
-    #    PRIVATE
-    #    ${PROJECT_SOURCE_DIR}/include
-    #    )
-    #target_compile_definitions(hal
-    #    PUBLIC
-    #    ${MCU}
-    #    HSE_VALUE=${HSE_VAL}
-    #    )
+    target_compile_definitions(hal
+        PUBLIC
+        ${MCU}
+        HSE_VALUE=${HSE_VAL}
+        )
 
     #-------------------
     # FreeRTOS library
@@ -211,34 +206,29 @@ if(TARGET_GROUP STREQUAL production)
     file(GLOB RTOS_SRC
         "${RTOS_DIR}/*.c"
         "${RTOS_DIR_MCU}/*.c"
-        ${RTOS_SRC}
         ${RTOS_HEAP}
         )
-    set(RTOS_INC
+    add_library(rtos STATIC
+        ${RTOS_SRC}
+        )
+    target_include_directories(rtos
+        PUBLIC
         ${RTOS_DIR}/include
         ${RTOS_DIR_MCU}
+        PRIVATE
+        ${PROJECT_SOURCE_DIR}/include
         )
-    #add_library(rtos STATIC
-    #    ${RTOS_SRC}
-    #    ${RTOS_HEAP}
-    #    )
-    #target_include_directories(rtos
-    #    PUBLIC
-    #    ${RTOS_DIR}/include
-    #    ${RTOS_DIR_MCU}
-    #    PRIVATE
-    #    ${PROJECT_SOURCE_DIR}/include
-    #    )
 
     #-------------------
     # Main elf
     #-------------------
+    file(GLOB MAIN_SRC
+        "src/*.c"
+        )
     set(SOURCES
-        src/main.c
+        ${MAIN_SRC}
         ${STARTUP_FILE}
         ${SYSTEM_FILE}
-        ${RTOS_SRC}
-        ${HAL_SRC}
         )
     add_executable(${PROJECT_NAME}.elf
         ${SOURCES}
@@ -246,8 +236,12 @@ if(TARGET_GROUP STREQUAL production)
     target_include_directories(${PROJECT_NAME}.elf
         PUBLIC
         ${PROJECT_SOURCE_DIR}/include
-        ${RTOS_INC}
-        ${HAL_INC}
+        )
+    target_link_libraries(${PROJECT_NAME}.elf
+        PUBLIC
+        rtos
+        hal
+        ${MODULES_USED}
         )
     target_compile_definitions(${PROJECT_NAME}.elf
         PUBLIC
