@@ -23,7 +23,7 @@
    list(APPEND tests_names "test_<your_module_name>")
    list(APPEND tests_flags " ")
    ```
--#### Build Tests for host
+#### Build Tests for host
 ``mkdir -p build/test``  
 ``cmake ../.. -DTARGET_GROUP=test``  
 To run the tests  
