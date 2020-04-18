@@ -9,6 +9,7 @@
 | Test framework | Unity |
 | Mocking framework | FFF |
 | GDB utilities | GDB dashboard |
+| GDB server | openocd |
 
 ### Usage
 - Debug build is the default build if ``CMAKE_BUILD_TYPE`` is not specified during cross-compiling  
@@ -23,6 +24,8 @@
    list(APPEND tests_names "test_<your_module_name>")
    list(APPEND tests_flags " ")
    ```
+- For ``make flash`` to work openocd should be running.
+
 #### Build Tests for host
 ``mkdir -p build/test``  
 ``cmake ../.. -DTARGET_GROUP=test``  
