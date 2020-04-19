@@ -78,80 +78,97 @@ set(CMSIS_DIR components/CMSIS/CMSIS)
 
 #################### ADVANCED SECTION ###########################
 
-# Control ARM Semihosting support
-if(NOT SEMIHOSTING)
-    set(SEMIHOSTING 1)
-    message(WARNING "[WARN] Semihosting support not specified: Enabling by default")
-endif()
+#-------------------
+# General Flags
+#-------------------
+set(OBJECT_GEN_FLAGS " \
+-fno-builtin \
+-Wall \
+-ffunction-sections -fdata-sections \
+-fomit-frame-pointer \
+" CACHE INTERNAL "Common flags for C/CXX/ASM/Linker")
 
+#-------------------
+# CFLAGS
+#-------------------
+set(CMAKE_C_FLAGS " \
+" CACHE INTERNAL "C Compiler options")
 
-######################################################################
-# @Target: ${PROJECT_NAME}.elf
-# @Brief: Build the actual elf file of the project
-######################################################################
-message(STATUS "[INFO] Startup file used is ${STARTUP_FILE}")
+#-------------------
+# ASMFLAGS for cross
+#-------------------
+set(CMAKE_ASM_FLAGS " \
+-x assembler-with-cpp \
+" CACHE INTERNAL "ASM Compiler options")
 
-add_subdirectory(modules)
+#-------------------
+# LFLAGS for cross
+#-------------------
+set(CMAKE_EXE_LINKER_FLAGS " \
+-Wl,-Map=${PROJECT_NAME}.map \
+-Wl,--print-memory-usage \
+-Wl,--gc-sections \
+" CACHE INTERNAL "Linker options")
 
-# Control specific options if crosscompiling
+#------------------
+# Debug Flags
+#------------------
+set(CMAKE_C_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf " CACHE INTERNAL "C Compiler options for debug build type")
+set(CMAKE_CXX_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf " CACHE INTERNAL "C++ Compiler options for debug build type")
+set(CMAKE_ASM_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf " CACHE INTERNAL "ASM Compiler options for debug build type")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "" CACHE INTERNAL "Linker options for debug build type")
+
+#------------------
+# Release Flags
+#-----------------
+set(CMAKE_C_FLAGS_RELEASE "-Os -flto " CACHE INTERNAL "C Compiler options for release build type")
+set(CMAKE_CXX_FLAGS_RELEASE "-Os -flto " CACHE INTERNAL "C++ Compiler options for release build type")
+set(CMAKE_ASM_FLAGS_RELEASE "" CACHE INTERNAL "ASM Compiler options for release build type")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-flto " CACHE INTERNAL "Linker options for release build type")
+
 if(CMAKE_CROSSCOMPILING STREQUAL "1")
+    # Control specific options if crosscompiling
+
     message(STATUS "[INFO] Cross compiling for ${MCU}")
+    message(STATUS "[INFO] Startup file used is ${STARTUP_FILE}")
+
+    # Control ARM Semihosting support
+    if(NOT SEMIHOSTING)
+        set(SEMIHOSTING 1)
+        message(WARNING "[WARN] Semihosting support not specified: Enabling by default")
+    endif()
+
     #-------------------
-    # General Flags
+    # General Flags for cross
     #-------------------
-    set(OBJECT_GEN_FLAGS " \
+    string(APPEND OBJECT_GEN_FLAGS " \
     -mcpu=${MCU_SPEC} \
     -mthumb \
-    -fno-builtin \
-    -Wall \
-    -ffunction-sections -fdata-sections \
-    -fomit-frame-pointer \
     -mthumb-interwork \
     -mabi=aapcs \
     ${FLOAT_SPEC} \
-    " CACHE INTERNAL "Common flags for C/CXX/ASM/Linker")
+    ")
 
     #-------------------
-    # CFLAGS
+    # CFLAGS for cross
     #-------------------
-    set(CMAKE_C_FLAGS " \
+    string(APPEND CMAKE_C_FLAGS " \
     ${OBJECT_GEN_FLAGS} \
-    " CACHE INTERNAL "C Compiler options")
+    ")
 
     #-------------------
-    #ASMFLAGS
+    # ASMFLAGS for cross
     #-------------------
-    set(CMAKE_ASM_FLAGS " \
+    string(APPEND CMAKE_ASM_FLAGS " \
     ${OBJECT_GEN_FLAGS} \
-    -x assembler-with-cpp \
-    " CACHE INTERNAL "ASM Compiler options")
+    ")
 
     #-------------------
-    # LFLAGS
+    # LFLAGS for cross
     #-------------------
-    set(CMAKE_EXE_LINKER_FLAGS " \
+    string(APPEND CMAKE_EXE_LINKER_FLAGS " \
     ${OBJECT_GEN_FLAGS} \
-    -Wl,-Map=${PROJECT_NAME}.map \
-    -Wl,--print-memory-usage \
-    -Wl,--gc-sections \
-    " CACHE INTERNAL "Linker options")
-
-    #------------------
-    # Debug Flags
-    #------------------
-    set(CMAKE_C_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf " CACHE INTERNAL "C Compiler options for debug build type")
-    set(CMAKE_CXX_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf " CACHE INTERNAL "C++ Compiler options for debug build type")
-    set(CMAKE_ASM_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf " CACHE INTERNAL "ASM Compiler options for debug build type")
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "" CACHE INTERNAL "Linker options for debug build type")
-
-    #------------------
-    # Release Flags
-    #-----------------
-    set(CMAKE_C_FLAGS_RELEASE "-Os -flto " CACHE INTERNAL "C Compiler options for release build type")
-    set(CMAKE_CXX_FLAGS_RELEASE "-Os -flto " CACHE INTERNAL "C++ Compiler options for release build type")
-    set(CMAKE_ASM_FLAGS_RELEASE "" CACHE INTERNAL "ASM Compiler options for release build type")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-flto " CACHE INTERNAL "Linker options for release build type")
-
+    ")
 
     find_file(LINKER_SCRIPT_PATH
         NAMES "${LINKER_SCRIPT}"
@@ -172,7 +189,46 @@ if(CMAKE_CROSSCOMPILING STREQUAL "1")
         string(APPEND CMAKE_EXE_LINKER_FLAGS "--specs=nosys.specs ")
     endif()
 
+else()
+    # Flags and options to set while compiling natively
+    message(STATUS "[INFO] Compiling natively")
+
+    #-------------------
+    # General Flags for native
+    #-------------------
+    string(APPEND OBJECT_GEN_FLAGS " \
+    --coverage \
+    ")
+
+    #-------------------
+    # CFLAGS for native
+    #-------------------
+    string(APPEND CMAKE_C_FLAGS " \
+    ${OBJECT_GEN_FLAGS} \
+    ")
+
+    #-------------------
+    # ASMFLAGS for native
+    #-------------------
+    string(APPEND CMAKE_ASM_FLAGS " \
+    ${OBJECT_GEN_FLAGS} \
+    ")
+
+    #-------------------
+    # LFLAGS for native
+    #-------------------
+    string(APPEND CMAKE_EXE_LINKER_FLAGS " \
+    ${OBJECT_GEN_FLAGS} \
+    ")
+
 endif()
+
+add_subdirectory(modules)
+
+######################################################################
+# @Target: ${PROJECT_NAME}.elf
+# @Brief: Build the actual elf file of the project
+######################################################################
 
 # Actual build which will go onto the board
 if(TARGET_GROUP STREQUAL production)
@@ -260,8 +316,18 @@ elseif(TARGET_GROUP STREQUAL test)
         components/unity/
         )
 
+    enable_testing()
     include(CTest)
     add_subdirectory(test)
+
+    set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
+    include(CodeCoverage)
+    setup_target_for_coverage_lcov(
+        NAME coverage
+        EXCLUDE "/usr/include/x86_64-linux-gnu/*" "components/unity/*"
+        EXECUTABLE ctest -V
+        DEPENDENCIES simple_module
+        )
 else()
     message(FATAL_ERROR "Given TARGET_GROUP unknown")
 endif()

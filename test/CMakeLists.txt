@@ -15,7 +15,6 @@ foreach(i RANGE ${count})
     target_link_libraries(${test_name}
         ${cut}
         unity
-        -fprofile-arcs -ftest-coverage
         )
     target_include_directories(${test_name}
         PRIVATE
