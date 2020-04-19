@@ -12,6 +12,9 @@
 | GDB server | openocd |
 
 ### Usage
+- **components** folder includes external libraries like RTOS, HAL, CMSIS, unity, and FFF mostly as git submodules.
+- **modules** folder contains sources for individual parts which can be unit tested.
+- **test** folder contains the tests for the modules.
 - Debug build is the default build if ``CMAKE_BUILD_TYPE`` is not specified during cross-compiling  
 - ARM Semihosting is turned on by default. To turn off use ``-DSEMIHOSTING=0``. ``SEMIHOSTING`` is also a macro which is set if ARM semihosting is enabled.  
 - Most of the values like HSE, linker script, RTOS path, HAL path, CMSIS path, etc can be set in the configurable section of CMakeLists.txt in project root.  
