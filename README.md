@@ -8,6 +8,7 @@
 | HAL  | STM32 CubeMX |
 | Test framework | Unity |
 | Mocking framework | FFF |
+| Code coverage | lcov |
 | GDB utilities | GDB dashboard |
 | GDB server | openocd |
 
@@ -34,6 +35,9 @@
 ``cmake ../.. -DTARGET_GROUP=test``  
 To run the tests  
 ``ctest --verbose``  
+or to build, test and generate coverage report all together  
+``make coverage``  
+The coverage report will be in **build/test/coverage/index.html**  
 
 #### Build Release for cross-compiling
 ``mkdir -p build/release``  
