@@ -12,6 +12,16 @@
 | GDB utilities | GDB dashboard |
 | GDB server | openocd |
 
+### Installation
+#### Method 1
+- Clone complete repo including submodules
+  `git clone --recurse-submodules --depth 1 --single-branch https://github.com/rgujju/STM32_Base_Project <your_project_name>`  
+  But the problem with this is the CMSIS and FreeRTOS repos (submodules) are huge due to history and takes time to download.
+
+#### Method 2
+- Clone this repo only and change paths of CMSIS and FreeRTOS in the **CmakeLists.txt** to the ones you already have.
+  `git clone --depth 1 --single-branch https://github.com/rgujju/STM32_Base_Project <your_project_name>`
+
 ### Usage
 - **components** folder includes external libraries like RTOS, HAL, CMSIS, unity, and FFF mostly as git submodules.
 - **modules** folder contains sources for individual parts which can be unit tested.
@@ -35,7 +45,7 @@
 ``cmake ../.. -DTARGET_GROUP=test``  
 To run the tests  
 ``ctest --verbose``  
-or to build, test and generate coverage report all together  
+or to build, test and generate coverage report all together.
 ``make coverage``  
 The coverage report will be in **build/test/coverage/index.html**  
 
@@ -61,3 +71,9 @@ Start GDB and load the board with elf with GDB dashboard output to eg: /dev/pts/
 
 Currently using terminator to split the terminal to two and output the GDB dashboard to the terminal on the right  
 
+### Porting
+- This project uses the STM32F429 mcu but should be portable to any mcu.
+- Replace **components/STM32F4xx_HAL_Driver** and **include/stm32f4xx_hal_conf.h** with the HAL of your mcu.
+- Replace **include/STM32F4xx** with the vendor files for your mcu. These files are basically the system, startup and header files of your mcu.
+- The above 2 folders are provided by the vendor. In case of STM32, it is possible to use STM32CubeMX to generate them.
+- Change *MCU Setup*, *HAL Setup*, and optionally *RTOS Setup* and *CMSIS Setup* in the **CMakeLists.txt** file.
