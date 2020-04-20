@@ -14,7 +14,7 @@
 
 ### Installation
 #### Method 1
-- Clone complete repo including submodules
+- Clone complete repo including submodules  
   `git clone --recurse-submodules --depth 1 --single-branch https://github.com/rgujju/STM32_Base_Project <your_project_name>`  
   But the problem with this is the CMSIS and FreeRTOS repos (submodules) are huge due to history and takes time to download.
 
