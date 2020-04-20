@@ -255,13 +255,14 @@ endif()
 
 add_subdirectory(modules)
 
-######################################################################
-# @Target: ${PROJECT_NAME}.elf
-# @Brief: Build the actual elf file of the project
-######################################################################
-
 # Actual build which will go onto the board
 if(TARGET_GROUP STREQUAL production)
+
+    ######################################################################
+    # @Target: ${PROJECT_NAME}.elf
+    # @Brief: Build the actual elf file of the project
+    ######################################################################
+
     #-------------------
     # HAL library
     #-------------------
@@ -336,6 +337,57 @@ if(TARGET_GROUP STREQUAL production)
         SEMIHOSTING=${SEMIHOSTING}
         )
 
+    ######################################################################
+    # @Target: flash
+    # @Brief: flash the release/debug elf using gdb
+    ######################################################################
+    add_custom_target(flash DEPENDS ${PROJECT_NAME}.elf)
+    add_custom_command(TARGET flash
+        #COMMAND bash "-c" "pgrep -x \"openocd\" || (echo \"Please start openocd\" && exit -1)"
+        COMMAND echo "Starting GDB client and loading ${PROJECT_NAME}.elf dashboard to $(GDB_TTY)"
+        COMMAND ${CMAKE_C_GDB} ${PROJECT_NAME}.elf
+        -ex "target extended :3333"
+        -ex "dashboard -output $(GDB_TTY)"
+        -ex "load ${PROJECT_NAME}.elf"
+        -ex "monitor arm semihosting enable"
+        )
+
+    ######################################################################
+    # @Target: doc
+    # @Brief: Generate doxygen documentation
+    ######################################################################
+    # check if Doxygen is installed
+    find_package(Doxygen)
+    if (DOXYGEN_FOUND)
+        # set input and output files
+        set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
+        set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+
+        # exclude folders while making documentation
+        # should be separated by spaces
+        set(DOXYGEN_EXCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/components/* ${CMAKE_CURRENT_SOURCE_DIR}/build/* ${CMAKE_CURRENT_SOURCE_DIR}/${MCU_DIR}*")
+
+        # request to configure the file
+        configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+        message("Doxygen build started")
+
+        # note the option ALL which allows to build the docs together with the application
+        add_custom_target(docs ALL
+            COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            COMMENT "Generating API documentation with Doxygen"
+            VERBATIM )
+    else (DOXYGEN_FOUND)
+        message("Doxygen need to be installed to generate the doxygen documentation")
+    endif (DOXYGEN_FOUND)
+
+    # Add additional files to the make clean
+    set_property(DIRECTORY PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
+        "${PROJECT_NAME}.map"
+        "${CMAKE_CURRENT_SOURCE_DIR}/html"
+        "${CMAKE_CURRENT_SOURCE_DIR}/latex"
+        )
+
 elseif(TARGET_GROUP STREQUAL test)
 
     add_library(unity STATIC
@@ -361,51 +413,6 @@ elseif(TARGET_GROUP STREQUAL test)
 else()
     message(FATAL_ERROR "Given TARGET_GROUP unknown")
 endif()
-
-######################################################################
-# @Target: flash
-# @Brief: flash the release/debug elf using gdb
-######################################################################
-add_custom_target(flash DEPENDS ${PROJECT_NAME}.elf)
-add_custom_command(TARGET flash
-    #COMMAND bash "-c" "pgrep -x \"openocd\" || (echo \"Please start openocd\" && exit -1)"
-    COMMAND echo "Starting GDB client and loading ${PROJECT_NAME}.elf dashboard to $(GDB_TTY)"
-    COMMAND ${CMAKE_C_GDB} ${PROJECT_NAME}.elf
-    -ex "target extended :3333"
-    -ex "dashboard -output $(GDB_TTY)"
-    -ex "load ${PROJECT_NAME}.elf"
-    -ex "monitor arm semihosting enable"
-    )
-
-######################################################################
-# @Target: doc
-# @Brief: Generate doxygen documentation
-######################################################################
-# check if Doxygen is installed
-find_package(Doxygen)
-if (DOXYGEN_FOUND)
-    # set input and output files
-    set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
-    set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
-
-    # exclude folders while making documentation
-    # should be separated by spaces
-    set(DOXYGEN_EXCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/components/* ${CMAKE_CURRENT_SOURCE_DIR}/build/* ${CMAKE_CURRENT_SOURCE_DIR}/${MCU_DIR}*")
-
-    # request to configure the file
-    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
-    message("Doxygen build started")
-
-    # note the option ALL which allows to build the docs together with the application
-    add_custom_target(docs ALL
-        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMENT "Generating API documentation with Doxygen"
-        VERBATIM )
-else (DOXYGEN_FOUND)
-    message("Doxygen need to be installed to generate the doxygen documentation")
-endif (DOXYGEN_FOUND)
-
 
 # Unset all cache
 unset(SEMIHOSTING)

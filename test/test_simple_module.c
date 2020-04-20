@@ -3,7 +3,7 @@
 #include "fff.h"
 DEFINE_FFF_GLOBALS;
 
-FAKE_VALUE_FUNC(uint8_t,add);
+FAKE_VALUE_FUNC(uint8_t, add, uint8_t, uint8_t);
 
 void setUp(void) {
     // set stuff up here
@@ -19,14 +19,13 @@ void test_SomethingSimple(void) {
     // So we have to fake that functio
     uint8_t myReturnVals[1] = { 3 };
     SET_RETURN_SEQ(add, myReturnVals, 1);
-    
-    TEST_ASSERT_EQUAL_INT(10,SomethingSimple(2,5)); 
-    TEST_ASSERT_EQUAL_INT(1,add_fake.call_count);
+    TEST_ASSERT_EQUAL_INT(10, SomethingSimple(2, 5));
+    TEST_ASSERT_EQUAL_INT(1, add_fake.call_count);
 }
 
 void test_AnotherSimpleThing(void) {
     // more test stuffl
-    TEST_ASSERT_EQUAL_INT(2,AnotherSimpleThing());
+    TEST_ASSERT_EQUAL_INT(2, AnotherSimpleThing());
 }
 
 // not needed when using generate_test_runner.rb

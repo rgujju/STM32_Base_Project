@@ -43,10 +43,13 @@
 
 #### Build Tests for host
 ``mkdir -p build/test``  
+Generate Makefile  
 ``cmake ../.. -DTARGET_GROUP=test``  
+Build the tests  
+``make``  
 To run the tests  
 ``ctest --verbose``  
-or to build, test and generate coverage report all together.
+or to test and generate coverage report all together.  
 ``make coverage``  
 The coverage report will be in **build/test/coverage/index.html**  
 
@@ -55,7 +58,7 @@ The coverage report will be in **build/test/coverage/index.html**
 Generate Makefile  
 ``cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../../cross.cmake -DTARGET_GROUP=production``  
 Generate elf  
-``make``  
+``make <your_project_name>.elf``  
 Load the board with elf  
 ``make flash``  
 
@@ -66,7 +69,7 @@ Note: To make FreeRTOS link with ``-flto`` option during Release build ``-Wl,--u
 Generate Makefile  
 ``cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=../../cross.cmake -DTARGET_GROUP=production``  
 Generate elf  
-``make``  
+``make <your_project_name>.elf``  
 Start GDB and load the board with elf with GDB dashboard output to eg: /dev/pts/12  
 ``make flash GDB_TTY=/dev/pts/12``  
 
