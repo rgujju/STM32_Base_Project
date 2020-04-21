@@ -367,6 +367,9 @@ if(TARGET_GROUP STREQUAL production)
         # should be separated by spaces
         set(DOXYGEN_EXCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/components/* ${CMAKE_CURRENT_SOURCE_DIR}/build/* ${CMAKE_CURRENT_SOURCE_DIR}/${MCU_DIR}*")
 
+        # set mainpage in doxygen
+        set(DOXYGEN_MAIN_PAGE "README.md")
+
         # request to configure the file
         configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
         message("Doxygen build started")
