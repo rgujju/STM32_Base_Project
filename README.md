@@ -72,14 +72,15 @@ Generate elf
 ``make <your_project_name>.elf``  
 Start GDB and load the board with elf with GDB dashboard output to eg: /dev/pts/12  
 ``make flash GDB_TTY=/dev/pts/12``  
-
+Note: ``flash`` target is not present when ``-DTARGET_GROUP=test`` is provided.  
 Currently using terminator to split the terminal to two and output the GDB dashboard to the terminal on the right  
 
 #### Generate documentation
 In the above created folders **(build/release, build/debug)**, use command  
 `make docs`  
 Documentation files will be generated in html and latex format. For example if command is used in **build/release** dir then
-documentation will be generated in **build/release/html/index.html**
+documentation will be generated in **build/release/html/index.html**  
+Note: ``docs`` target is not present when ``-DTARGET_GROUP=test`` is provided.  
 
 ### Porting
 - This project uses the STM32F429 mcu but should be portable to any mcu.
