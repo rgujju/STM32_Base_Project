@@ -1,4 +1,5 @@
-### STM32 Base/Template Project {#mainpage}
+<!-- {#mainpage} -->
+### STM32 Base/Template Project
 
 |    Type    |   Tool used |
 | ---------- | ----------- |
