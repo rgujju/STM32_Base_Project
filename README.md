@@ -76,7 +76,7 @@ Start GDB and load the board with elf with GDB dashboard output to eg: /dev/pts/
 Currently using terminator to split the terminal to two and output the GDB dashboard to the terminal on the right  
 
 #### Generate documentation
-In any of the above created folders **(build/release, build/debug, build/test, etc)**, use command  
+In the above created folders **(build/release, build/debug)**, use command  
 `make docs`  
 Documentation files will be generated in html and latex format. For example if command is used in **build/release** dir then
 documentation will be generated in **build/release/html/index.html**

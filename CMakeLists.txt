@@ -384,8 +384,8 @@ if(TARGET_GROUP STREQUAL production)
     # Add additional files to the make clean
     set_property(DIRECTORY PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
         "${PROJECT_NAME}.map"
-        "${CMAKE_CURRENT_SOURCE_DIR}/html"
-        "${CMAKE_CURRENT_SOURCE_DIR}/latex"
+        "${CMAKE_CURRENT_BINARY_DIR}/html"
+        "${CMAKE_CURRENT_BINARY_DIR}/latex"
         )
 
 elseif(TARGET_GROUP STREQUAL test)
