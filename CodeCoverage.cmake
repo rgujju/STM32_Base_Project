@@ -239,7 +239,7 @@ function(setup_target_for_coverage_lcov)
         COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} -c -i -d . -b ${BASEDIR} -o ${Coverage_NAME}.base
 
         # Run tests
-        COMMAND ${Coverage_EXECUTABLE} ${Coverage_EXECUTABLE_ARGS}
+        COMMAND ${Coverage_EXECUTABLE} ${Coverage_EXECUTABLE_ARGS} || exit 0
 
         # Capturing lcov counters and generating report
         COMMAND ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} --directory . -b ${BASEDIR} --capture --output-file ${Coverage_NAME}.capture
