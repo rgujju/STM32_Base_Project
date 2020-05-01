@@ -52,7 +52,7 @@ mark_as_advanced(VERSION_MAJOR VERSION_MINOR VERSION_PATCH)
 #------------------
 # Modules Setup
 #------------------
-set(MODULES_USED
+list(APPEND MODULES_USED
     simple_module
     )
 #-------------------
@@ -64,14 +64,9 @@ set(MCU_SPEC  cortex-m4)
 set(FLOAT_SPEC "-mfloat-abi=hard -mfpu=fpv4-sp-d16")
 
 # Dont need to change this if MCU is defined correctly
-# Below commands are for fetching the path to the system and startup files
-# If execute_process is not able to locate the files properly
 # then directly set the STARTUP_FILE and SYSTEM_FILE to the required files
-execute_process(COMMAND
-    bash "-c" "echo -n startup_${MCU}.s | awk '{print tolower($0)}'"
-    OUTPUT_VARIABLE STARTUP_FILE_NAME
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
+string(TOLOWER startup_${MCU}.s STARTUP_FILE_NAME)
+
 set(STARTUP_FILE ${MCU_DIR}/Source/Templates/gcc/${STARTUP_FILE_NAME})
 set(SYSTEM_FILE  ${MCU_DIR}/Source/Templates/system_stm32f4xx.c)
 
@@ -375,7 +370,7 @@ if(TARGET_GROUP STREQUAL production)
         message("Doxygen build started")
 
         # note the option ALL which allows to build the docs together with the application
-        add_custom_target(docs ALL
+        add_custom_target(docs
             COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             COMMENT "Generating API documentation with Doxygen"
