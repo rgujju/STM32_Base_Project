@@ -88,3 +88,4 @@ Note: ``docs`` target is not present when ``-DTARGET_GROUP=test`` is provided.
 - Replace **include/STM32F4xx** with the vendor files for your mcu. These files are basically the system, startup and header files of your mcu.
 - The above 2 folders are provided by the vendor. In case of STM32, it is possible to use STM32CubeMX to generate them.
 - Change *MCU Setup*, *HAL Setup*, and optionally *RTOS Setup* and *CMSIS Setup* in the **CMakeLists.txt** file.
+- Linker script **linker.ld** needs to be changes according to your mcu memory. **layout_base.ld** also may be requried to be changed.
