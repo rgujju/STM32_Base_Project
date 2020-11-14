@@ -46,4 +46,4 @@ MEMORY
 }
 
 
-INCLUDE ../../layout_base.ld
+INCLUDE layout_base.ld
